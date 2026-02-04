@@ -24,17 +24,22 @@ pumps_data = [
 maintenance_data = []
 
 # -------------------- HEALTH --------------------
-@app.get("/health", tags=["Health"])
+@app.get("/health")
 def health_check():
     return {
+        "success": True,
         "status": "ok",
         "service": "IOCL Maintenance Backend"
     }
 
 # -------------------- ROOT --------------------
-@app.get("/", tags=["Root"])
+@app.get("/")
 def root():
-    return {"message": "Backend is running 🚀"}
+    return {
+        "success": True,
+        "message": "Backend is running 🚀"
+    }
+
 
 # -------------------- PUMPS --------------------
 @app.get("/pumps", tags=["Pumps"])
