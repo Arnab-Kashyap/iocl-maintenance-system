@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.schemas.pump import PumpCreate
 from app.schemas.maintenance import MaintenanceCreate
+from fastapi import HTTPException, status
+
 
 app = FastAPI(title="IOCL Maintenance System")
 
@@ -52,7 +54,11 @@ def get_pump_by_id(pump_id: int):
     for pump in pumps_data:
         if pump["id"] == pump_id:
             return pump
-    return {"message": "Pump not found"}
+    raise HTTPException(
+    status_code=status.HTTP_404_NOT_FOUND,
+    detail="Pump not found"
+)
+
 
 
 @app.post("/pumps", tags=["Pumps"])
@@ -68,9 +74,51 @@ def add_pump(pump: PumpCreate):
         "pump": new_pump
     }
 
+
+    new_pump = {
+        "id": len(pumps_data) + 1,
+        "name": pump.name,
+        "status": pump.status
+    }
+    pumps_data.append(new_pump)
+
+    return {
+        "message": "Pump added successfully",
+        "pump": new_pump
+    }
+
+
 # -------------------- MAINTENANCE --------------------
 @app.post("/maintenance", tags=["Maintenance"])
 def schedule_maintenance(maintenance: MaintenanceCreate):
+    # check if pump exists
+    pump = None
+    for p in pumps_data:
+        if p["id"] == maintenance.pump_id:
+            pump = p
+            break
+
+    if not pump:
+        return {"message": "Pump not found"}
+
+    # add maintenance record
+    record = {
+        "id": len(maintenance_data) + 1,
+        "pump_id": maintenance.pump_id,
+        "description": maintenance.description,
+        "status": maintenance.status
+    }
+    maintenance_data.append(record)
+
+    # auto update pump status
+    pump["status"] = "Under Maintenance"
+
+    return {
+        "message": "Maintenance scheduled and pump status updated",
+        "maintenance": record,
+        "pump": pump
+    }
+
     record = {
         "id": len(maintenance_data) + 1,
         "pump_id": maintenance.pump_id,
