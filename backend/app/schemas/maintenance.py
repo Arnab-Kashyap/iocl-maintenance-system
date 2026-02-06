@@ -1,8 +1,12 @@
 from pydantic import BaseModel
-from typing import Literal
+from enum import Enum
+
+class MaintenanceStatus(str, Enum):
+    Scheduled = "Scheduled"
+    In_Progress = "In Progress"
+    Completed = "Completed"
 
 class MaintenanceCreate(BaseModel):
     pump_id: int
     description: str
-    status: Literal["Scheduled", "In Progress", "Completed"]
-
+    status: MaintenanceStatus
