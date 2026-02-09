@@ -24,27 +24,26 @@ pumps_data = [
 maintenance_data = []
 @app.put("/maintenance/{maintenance_id}", tags=["Maintenance"])
 def update_maintenance_status(maintenance_id: int, new_status: str):
-    for record in maintenance_data:
-        if record["id"] == maintenance_id:
-            record["status"] = new_status
+    for m in maintenance_data:
+        if m["id"] == maintenance_id:
+            m["status"] = new_status
 
-            # update pump status accordingly
+            # update pump status
             for pump in pumps_data:
-                if pump["id"] == record["pump_id"]:
+                if pump["id"] == m["pump_id"]:
                     if new_status == "Completed":
                         pump["status"] = "Active"
                     else:
                         pump["status"] = "Under Maintenance"
 
             return {
-                "message": "Maintenance status updated",
-                "maintenance": record
+                "success": True,
+                "message": "Maintenance and pump status updated",
+                "maintenance": m
             }
 
-    raise HTTPException(
-        status_code=404,
-        detail="Maintenance record not found"
-    )
+    raise HTTPException(status_code=404, detail="Maintenance not found")
+
 
 # -------------------- HEALTH --------------------
 @app.get("/health")
