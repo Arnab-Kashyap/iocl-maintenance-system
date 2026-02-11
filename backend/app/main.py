@@ -4,10 +4,13 @@ from sqlalchemy.orm import Session
 
 from app.database import Base, engine, get_db
 from app.models.pump import Pump
+from app.models.maintenance import Maintenance
 from app.schemas.pump import PumpCreate
 from app.schemas.maintenance import MaintenanceCreate
+from datetime import datetime
 
-# create DB tables
+
+# Create DB tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="IOCL Maintenance System")
@@ -20,9 +23,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# -------------------- DUMMY MAINTENANCE DATA --------------------
-maintenance_data = []
 
 # -------------------- HEALTH --------------------
 @app.get("/health")
@@ -41,7 +41,10 @@ def root():
         "message": "Backend is running 🚀"
     }
 
-# -------------------- PUMPS (DATABASE) --------------------
+# =====================================================
+#                    PUMPS
+# =====================================================
+
 @app.post("/pumps", tags=["Pumps"])
 def add_pump(pump: PumpCreate, db: Session = Depends(get_db)):
     new_pump = Pump(
@@ -67,16 +70,40 @@ def get_pumps(db: Session = Depends(get_db)):
 @app.get("/pumps/{pump_id}", tags=["Pumps"])
 def get_pump_by_id(pump_id: int, db: Session = Depends(get_db)):
     pump = db.query(Pump).filter(Pump.id == pump_id).first()
+
     if not pump:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Pump not found"
         )
+
     return pump
 
-# -------------------- MAINTENANCE (DUMMY) --------------------
+
+@app.delete("/pumps/{pump_id}", tags=["Pumps"])
+def delete_pump(pump_id: int, db: Session = Depends(get_db)):
+    pump = db.query(Pump).filter(Pump.id == pump_id).first()
+
+    if not pump:
+        raise HTTPException(status_code=404, detail="Pump not found")
+
+    db.delete(pump)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "Pump deleted successfully"
+    }
+
+# =====================================================
+#                    MAINTENANCE
+# =====================================================
+
 @app.post("/maintenance", tags=["Maintenance"])
-def schedule_maintenance(maintenance: MaintenanceCreate, db: Session = Depends(get_db)):
+def schedule_maintenance(
+    maintenance: MaintenanceCreate,
+    db: Session = Depends(get_db)
+):
     pump = db.query(Pump).filter(Pump.id == maintenance.pump_id).first()
 
     if not pump:
@@ -85,61 +112,107 @@ def schedule_maintenance(maintenance: MaintenanceCreate, db: Session = Depends(g
             detail="Pump not found"
         )
 
-    record = {
-        "id": len(maintenance_data) + 1,
-        "pump_id": maintenance.pump_id,
-        "description": maintenance.description,
-        "status": maintenance.status
-    }
+    new_record = Maintenance(
+        pump_id=maintenance.pump_id,
+        description=maintenance.description,
+        status=maintenance.status
+    )
 
-    maintenance_data.append(record)
+    db.add(new_record)
 
-    # update pump status
+    # Update pump status
     pump.status = "Under Maintenance"
+    pump.last_maintenance_date = datetime.utcnow()
+
+
     db.commit()
+    db.refresh(new_record)
 
     return {
         "success": True,
         "message": "Maintenance scheduled",
-        "maintenance": record
+        "maintenance": new_record
     }
 
 
 @app.put("/maintenance/{maintenance_id}", tags=["Maintenance"])
-def update_maintenance_status(maintenance_id: int, new_status: str, db: Session = Depends(get_db)):
-    for m in maintenance_data:
-        if m["id"] == maintenance_id:
-            m["status"] = new_status
+def update_maintenance_status(
+    maintenance_id: int,
+    new_status: str,
+    db: Session = Depends(get_db)
+):
+    record = db.query(Maintenance).filter(
+        Maintenance.id == maintenance_id
+    ).first()
 
-            pump = db.query(Pump).filter(Pump.id == m["pump_id"]).first()
-            if pump:
-                pump.status = "Active" if new_status == "Completed" else "Under Maintenance"
-                db.commit()
+    if not record:
+        raise HTTPException(
+            status_code=404,
+            detail="Maintenance record not found"
+        )
 
-            return {
-                "success": True,
-                "message": "Maintenance updated",
-                "maintenance": m
-            }
+    record.status = new_status
 
-    raise HTTPException(
-        status_code=404,
-        detail="Maintenance record not found"
-    )
+    pump = db.query(Pump).filter(
+        Pump.id == record.pump_id
+    ).first()
+
+    if pump:
+        pump.status = (
+            "Active" if new_status == "Completed"
+            else "Under Maintenance"
+        )
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "Maintenance updated",
+        "maintenance": record
+    }
 
 
 @app.get("/maintenance/pump/{pump_id}", tags=["Maintenance"])
-def get_maintenance_by_pump(pump_id: int):
-    return [m for m in maintenance_data if m["pump_id"] == pump_id]
+def get_maintenance_by_pump(pump_id: int, db: Session = Depends(get_db)):
+    return db.query(Maintenance).filter(
+        Maintenance.pump_id == pump_id
+    ).all()
 
-# -------------------- REPORTS --------------------
+
+@app.delete("/maintenance/{maintenance_id}", tags=["Maintenance"])
+def delete_maintenance(maintenance_id: int, db: Session = Depends(get_db)):
+    record = db.query(Maintenance).filter(
+        Maintenance.id == maintenance_id
+    ).first()
+
+    if not record:
+        raise HTTPException(
+            status_code=404,
+            detail="Maintenance not found"
+        )
+
+    db.delete(record)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "Maintenance record deleted"
+    }
+
+# =====================================================
+#                    REPORTS
+# =====================================================
+
 @app.get("/reports/summary", tags=["Reports"])
 def get_report_summary(db: Session = Depends(get_db)):
     pumps = db.query(Pump).all()
+    maintenance = db.query(Maintenance).all()
 
     return {
         "total_pumps": len(pumps),
         "active_pumps": len([p for p in pumps if p.status == "Active"]),
-        "pumps_under_maintenance": len([p for p in pumps if p.status != "Active"]),
-        "total_maintenance_records": len(maintenance_data)
+        "pumps_under_maintenance": len(
+            [p for p in pumps if p.status != "Active"]
+        ),
+        "total_maintenance_records": len(maintenance)
     }
