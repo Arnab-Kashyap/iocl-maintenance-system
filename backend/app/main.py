@@ -1,13 +1,13 @@
 from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from app.database import Base, engine, get_db
 from app.models.pump import Pump
 from app.models.maintenance import Maintenance
 from app.schemas.pump import PumpCreate
-from app.schemas.maintenance import MaintenanceCreate
-from datetime import datetime
+from app.schemas.maintenance import MaintenanceCreate, MaintenanceUpdate
 
 
 # Create DB tables
@@ -95,6 +95,7 @@ def delete_pump(pump_id: int, db: Session = Depends(get_db)):
         "message": "Pump deleted successfully"
     }
 
+
 # =====================================================
 #                    MAINTENANCE
 # =====================================================
@@ -124,7 +125,6 @@ def schedule_maintenance(
     pump.status = "Under Maintenance"
     pump.last_maintenance_date = datetime.utcnow()
 
-
     db.commit()
     db.refresh(new_record)
 
@@ -138,9 +138,10 @@ def schedule_maintenance(
 @app.put("/maintenance/{maintenance_id}", tags=["Maintenance"])
 def update_maintenance_status(
     maintenance_id: int,
-    new_status: str,
+    data: MaintenanceUpdate,
     db: Session = Depends(get_db)
 ):
+
     record = db.query(Maintenance).filter(
         Maintenance.id == maintenance_id
     ).first()
@@ -151,7 +152,7 @@ def update_maintenance_status(
             detail="Maintenance record not found"
         )
 
-    record.status = new_status
+    record.status = data.status
 
     pump = db.query(Pump).filter(
         Pump.id == record.pump_id
@@ -159,9 +160,12 @@ def update_maintenance_status(
 
     if pump:
         pump.status = (
-            "Active" if new_status == "Completed"
+            "Active" if data.status == "Completed"
             else "Under Maintenance"
         )
+
+        if data.status == "Completed":
+            pump.last_maintenance_date = datetime.utcnow()
 
     db.commit()
 
@@ -198,6 +202,7 @@ def delete_maintenance(maintenance_id: int, db: Session = Depends(get_db)):
         "success": True,
         "message": "Maintenance record deleted"
     }
+
 
 # =====================================================
 #                    REPORTS
