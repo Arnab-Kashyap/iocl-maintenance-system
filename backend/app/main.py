@@ -8,6 +8,9 @@ from app.models.pump import Pump
 from app.models.maintenance import Maintenance
 from app.schemas.pump import PumpCreate
 from app.schemas.maintenance import MaintenanceCreate, MaintenanceUpdate
+from app.schemas.pump import PumpResponse
+from app.schemas.maintenance import MaintenanceResponse
+
 
 
 # Create DB tables
@@ -45,7 +48,8 @@ def root():
 #                    PUMPS
 # =====================================================
 
-@app.post("/pumps", tags=["Pumps"])
+@app.post("/pumps", response_model=PumpResponse, tags=["Pumps"])
+
 def add_pump(pump: PumpCreate, db: Session = Depends(get_db)):
     new_pump = Pump(
         name=pump.name,
@@ -62,8 +66,9 @@ def add_pump(pump: PumpCreate, db: Session = Depends(get_db)):
     }
 
 
-@app.get("/pumps", tags=["Pumps"])
+@app.get("/pumps", response_model=list[PumpResponse], tags=["Pumps"])
 def get_pumps(db: Session = Depends(get_db)):
+
     return db.query(Pump).all()
 
 
@@ -176,7 +181,12 @@ def update_maintenance_status(
     }
 
 
-@app.get("/maintenance/pump/{pump_id}", tags=["Maintenance"])
+@app.get(
+    "/maintenance/pump/{pump_id}",
+    response_model=list[MaintenanceResponse],
+    tags=["Maintenance"]
+)
+
 def get_maintenance_by_pump(pump_id: int, db: Session = Depends(get_db)):
     return db.query(Maintenance).filter(
         Maintenance.pump_id == pump_id
