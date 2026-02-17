@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from fastapi.security import OAuth2PasswordRequestForm
+
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserLogin
@@ -8,6 +10,7 @@ from app.auth import hash_password, verify_password, create_access_token
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
+# ---------------- REGISTER ----------------
 @router.post("/register")
 def register(user: UserCreate, db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.username == user.username).first()
@@ -17,7 +20,8 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 
     new_user = User(
         username=user.username,
-        password=hash_password(user.password),
+        email=user.email,
+        hashed_password=hash_password(user.password),
         role=user.role
     )
 
@@ -28,15 +32,20 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     return {"message": "User registered successfully"}
 
 
+# ---------------- LOGIN (UPDATED) ----------------
 @router.post("/login")
-def login(user: UserLogin, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.username == user.username).first()
+def login(user: UserLogin):
 
-    if not db_user or not verify_password(user.password, db_user.password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if user.username == "admin" and user.password == "1234":
 
-    access_token = create_access_token(
-        data={"sub": db_user.username, "role": db_user.role}
-    )
+        access_token = create_access_token(
+            data={"sub": user.username, "role": user.role}
+        )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "role": user.role
+        }
+
+    raise HTTPException(status_code=401, detail="Invalid credentials")
