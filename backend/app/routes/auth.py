@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserLogin
+from app.schemas.user import UserCreate
 from app.auth import hash_password, verify_password, create_access_token
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -32,20 +32,26 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     return {"message": "User registered successfully"}
 
 
-# ---------------- LOGIN (UPDATED) ----------------
+# ---------------- LOGIN (OAuth2 FORM) ----------------
 @router.post("/login")
-def login(user: UserLogin):
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
 
-    if user.username == "admin" and user.password == "1234":
+    db_user = db.query(User).filter(User.username == form_data.username).first()
 
-        access_token = create_access_token(
-            data={"sub": user.username, "role": user.role}
-        )
+    if not db_user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "role": user.role
-        }
+    if not verify_password(form_data.password, db_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    raise HTTPException(status_code=401, detail="Invalid credentials")
+    access_token = create_access_token(
+        data={"sub": db_user.username, "role": db_user.role}
+    )
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
