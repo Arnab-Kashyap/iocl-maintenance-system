@@ -1,13 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from jose import JWTError, jwt
 
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate
-from app.auth import hash_password, verify_password, create_access_token
+from app.auth import hash_password, verify_password, create_access_token, SECRET_KEY, ALGORITHM
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
 # ---------------- REGISTER ----------------
@@ -32,13 +35,12 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     return {"message": "User registered successfully"}
 
 
-# ---------------- LOGIN (OAuth2 FORM) ----------------
+# ---------------- LOGIN ----------------
 @router.post("/login")
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-
     db_user = db.query(User).filter(User.username == form_data.username).first()
 
     if not db_user:
@@ -55,3 +57,28 @@ def login(
         "access_token": access_token,
         "token_type": "bearer"
     }
+
+
+# ---------------- GET CURRENT USER ----------------
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        role: str = payload.get("role")
+
+        if username is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        return {"username": username, "role": role}
+
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
+# ---------------- ROLE CHECKER ----------------
+def require_role(required_role: str):
+    def role_checker(user=Depends(get_current_user)):
+        if user["role"] != required_role:
+            raise HTTPException(status_code=403, detail="Access denied")
+        return user
+    return role_checker
