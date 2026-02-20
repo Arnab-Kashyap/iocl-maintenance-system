@@ -7,8 +7,6 @@ import {
   EyeOff,
   Shield,
   Activity,
-  UserCog,
-  Wrench,
 } from "lucide-react"
 import logo from "../assets/logo.png"
 
@@ -49,14 +47,22 @@ const Login = () => {
         return
       }
 
+      // ✅ Optional: Validate selected role matches backend role
+      if (data.role.toLowerCase() !== selectedRole.toLowerCase()) {
+  alert("You selected wrong role for this account")
+  setIsLoading(false)
+  return
+}
+
+
       // Save token & role
       localStorage.setItem("token", data.access_token)
       localStorage.setItem("role", data.role)
 
-      // Navigate based on BACKEND role
+      // ✅ Correct routing (matches App.tsx)
       if (data.role === "admin") {
-        navigate("/admin-dashboard")
-      } else {
+        navigate("/dashboard")
+      } else if (data.role === "technician") {
         navigate("/technician-dashboard")
       }
 
@@ -92,11 +98,7 @@ const Login = () => {
           />
         </div>
 
-        <div className="absolute top-0 left-0 w-full h-1/3 bg-gradient-to-b from-gray-900 to-transparent" />
-        <div className="absolute bottom-0 left-0 w-full h-1/3 bg-gradient-to-t from-gray-900 to-transparent" />
-
         <div className="relative z-10 flex flex-col justify-center px-16 text-white">
-
           <div className="flex items-center space-x-4 mb-12">
             <img src={logo} alt="IOCL Logo" className="h-16 w-auto object-contain" />
             <div>
@@ -141,14 +143,12 @@ const Login = () => {
               </div>
             </div>
           </div>
-
         </div>
       </div>
 
       {/* RIGHT SIDE */}
       <div className="flex-1 flex items-center justify-center p-8 bg-gray-900">
         <div className="w-full max-w-md">
-
           <div className="bg-gray-800 rounded-2xl shadow-2xl p-8 border border-gray-700">
 
             <div className="mb-8">
@@ -162,7 +162,7 @@ const Login = () => {
 
             <form className="space-y-6" onSubmit={handleLogin}>
 
-              {/* ROLE SELECTOR (UI only) */}
+              {/* ROLE SELECTOR */}
               <div>
                 <label className="block text-sm font-semibold text-gray-300 mb-2">
                   Login As
