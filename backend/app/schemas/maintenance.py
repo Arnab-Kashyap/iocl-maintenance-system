@@ -22,3 +22,17 @@ class MaintenanceResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ───────── ML FAILURE PREDICTION SCHEMAS ─────────
+
+class FailurePredictionRequest(BaseModel):
+    usage_hours: int
+    temperature: float
+    vibration: float
+    breakdown_count: int
+
+
+class FailurePredictionResponse(BaseModel):
+    failure_risk: int
+    probability: float

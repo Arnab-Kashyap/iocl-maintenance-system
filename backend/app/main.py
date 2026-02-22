@@ -10,6 +10,8 @@ from app.models.maintenance import Maintenance
 from app.routes import pump as pump_routes
 from app.routes import maintenance as maintenance_routes
 from app.routes import auth as auth_routes   # ✅ FIXED
+from app.routes import prediction
+app.include_router(prediction.router)
 
 # ✅ Create FastAPI app FIRST
 app = FastAPI(title="IOCL Maintenance System")
