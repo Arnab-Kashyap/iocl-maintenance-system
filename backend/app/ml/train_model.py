@@ -1,8 +1,7 @@
-# backend/app/train_model.py
-
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 import joblib
+from pathlib import Path
 
 # Generate dummy training data
 # Features: [usage_hours, temperature, vibration, breakdown_count]
@@ -23,7 +22,8 @@ y = np.array([0, 0, 1, 1, 0, 1])
 model = LogisticRegression()
 model.fit(X, y)
 
-# Save model
-joblib.dump(model, "pump_failure_model.pkl")
+# Save model inside ml folder
+MODEL_PATH = Path(__file__).parent / "pump_failure_model.pkl"
+joblib.dump(model, MODEL_PATH)
 
 print("Model trained and saved successfully!")

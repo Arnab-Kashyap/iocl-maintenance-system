@@ -1,26 +1,18 @@
-import pickle
+import joblib
 import numpy as np
 from pathlib import Path
 
-# Get correct path of model file
 MODEL_PATH = Path(__file__).parent / "pump_failure_model.pkl"
 
-# Load model only once
-with open(MODEL_PATH, "rb") as f:
-    model = pickle.load(f)
+model = joblib.load(MODEL_PATH)
 
+def predict_pump_failure(usage_hours, temperature, vibration, breakdown_count):
+    features = np.array([[usage_hours, temperature, vibration, breakdown_count]])
 
-def predict_pump_failure(usage_hours: int, temperature: float, vibration: float):
-    """
-    Predict pump failure risk
-    """
-
-    data = np.array([[usage_hours, temperature, vibration]])
-
-    prediction = model.predict(data)[0]
-    probability = model.predict_proba(data)[0][1]
+    prediction = model.predict(features)[0]
+    probability = model.predict_proba(features)[0][1]
 
     return {
-        "prediction": int(prediction),
-        "probability": float(probability)
+        "failure_risk": int(prediction),
+        "probability": float(round(probability * 100, 2))
     }
