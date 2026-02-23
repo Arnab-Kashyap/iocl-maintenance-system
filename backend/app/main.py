@@ -2,10 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
 from app.models import *
-
 from app.models.pump import Pump
 from app.models.maintenance import Maintenance
-
 from app.routes import pump as pump_routes
 from app.routes import maintenance as maintenance_routes
 from app.routes import auth as auth_routes
@@ -15,7 +13,7 @@ app = FastAPI(title="IOCL Maintenance System")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

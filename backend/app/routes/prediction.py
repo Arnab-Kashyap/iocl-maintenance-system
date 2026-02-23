@@ -1,33 +1,30 @@
 from fastapi import APIRouter
 from app.ml.ml_predictor import predict_pump_failure
+from app.schemas.prediction import PredictionRequest
 
 router = APIRouter(
     prefix="/prediction",
     tags=["Prediction"]
 )
 
+
 @router.post("/")
-def predict_failure(
-    usage_hours: int,
-    temperature: float,
-    vibration: float,
-    breakdown_count: int
-):
+def predict_failure(request: PredictionRequest):
 
     result = predict_pump_failure(
-        usage_hours,
-        temperature,
-        vibration,
-        breakdown_count
+        request.usage_hours,
+        request.temperature,
+        request.vibration,
+        request.breakdown_count
     )
 
-    if result["failure_risk"] == 1:
+    if result["prediction"] == 1:
         message = "⚠️ High risk of failure. Schedule maintenance."
     else:
         message = "✅ Pump operating normally."
 
     return {
-        "failure_prediction": result["failure_risk"],
+        "failure_prediction": result["prediction"],
         "failure_probability": result["probability"],
         "message": message
     }
