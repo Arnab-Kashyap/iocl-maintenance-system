@@ -1,21 +1,19 @@
-from pydantic import BaseModel
-from datetime import datetime
-from typing import Optional
+# app/schemas/pump.py
+
+from pydantic import BaseModel, ConfigDict
 from typing import Literal
-from app.auth import require_admin, get_current_user
-from fastapi import Depends
+from datetime import datetime
 
 
 class PumpCreate(BaseModel):
     name: str
-    status: Literal["Active", "Inactive"]
+    status: Literal["Active", "Inactive", "Under Maintenance"]
 
 
 class PumpResponse(BaseModel):
     id: int
     name: str
-    status: Literal["Active", "Inactive", "Under Maintenance"]
-    last_maintenance_date: Optional[datetime]
+    status: str
+    created_at: datetime   
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

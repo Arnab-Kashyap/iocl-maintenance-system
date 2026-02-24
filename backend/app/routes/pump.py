@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+# app/routes/pumps.py
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -6,13 +8,14 @@ from app.models.pump import Pump
 from app.schemas.pump import PumpCreate, PumpResponse
 from app.routes.auth import get_current_user, require_role
 
+
 router = APIRouter(
     prefix="/pumps",
     tags=["Pumps"]
 )
 
 
-# ---------------- CREATE PUMP (ADMIN ONLY) ----------------
+# ✅ CREATE PUMP (ADMIN ONLY)
 @router.post("/", response_model=PumpResponse)
 def add_pump(
     pump: PumpCreate,
@@ -31,16 +34,17 @@ def add_pump(
     return new_pump
 
 
-# ---------------- GET ALL PUMPS (ANY LOGGED USER) ----------------
+# ✅ GET ALL PUMPS (ANY LOGGED IN USER)
 @router.get("/", response_model=list[PumpResponse])
 def get_pumps(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    return db.query(Pump).all()
+    pumps = db.query(Pump).all()
+    return pumps
 
 
-# ---------------- GET PUMP BY ID (ANY LOGGED USER) ----------------
+# ✅ GET PUMP BY ID
 @router.get("/{pump_id}", response_model=PumpResponse)
 def get_pump_by_id(
     pump_id: int,
@@ -50,15 +54,12 @@ def get_pump_by_id(
     pump = db.query(Pump).filter(Pump.id == pump_id).first()
 
     if not pump:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Pump not found"
-        )
+        raise HTTPException(status_code=404, detail="Pump not found")
 
     return pump
 
 
-# ---------------- DELETE PUMP (ADMIN ONLY) ----------------
+# ✅ DELETE PUMP (ADMIN ONLY)
 @router.delete("/{pump_id}")
 def delete_pump(
     pump_id: int,
@@ -68,10 +69,7 @@ def delete_pump(
     pump = db.query(Pump).filter(Pump.id == pump_id).first()
 
     if not pump:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Pump not found"
-        )
+        raise HTTPException(status_code=404, detail="Pump not found")
 
     db.delete(pump)
     db.commit()
