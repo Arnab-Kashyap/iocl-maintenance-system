@@ -1,69 +1,50 @@
-🤖 AI-Powered Pump Maintenance System
+# 🛠 AI-Powered Pump Maintenance System for Industrial Pumps
 
-The AI-Powered Pump Maintenance System is a full-stack industrial application designed to monitor pump health, manage maintenance operations, and predict potential failures using Machine Learning.
+An AI-powered predictive maintenance system that monitors pump data and predicts potential failures before they occur, helping reduce downtime, maintenance costs, and unexpected breakdowns.
 
-It combines real-time maintenance tracking with AI-based risk prediction to support smarter, more efficient maintenance decisions.
+---
 
-🚀 Key Features
-🔐 Secure Authentication
+## 📌 Project Overview
 
-JWT-based login system
+This project uses Machine Learning and a FastAPI backend to analyze pump data such as temperature, pressure, vibration, and flow rate.  
+Based on historical data, the trained model predicts whether a pump is likely to fail or operate normally.
 
-Role-based access (Admin / Technician)
+The system simulates real-time pump monitoring and displays predictions on an interactive frontend dashboard.
 
-📊 Pump Management Dashboard
+---
 
-View all pumps and their current status
+## 🚀 Key Features
 
-Track pumps under maintenance
+- 📊 Pump sensor data analysis  
+- 🤖 Machine Learning failure prediction  
+- 🔧 Maintenance tracking system  
+- 🔐 Secure authentication (JWT-based)  
+- 📈 Interactive admin dashboard  
 
-Monitor last maintenance dates
+---
 
-🔧 Maintenance Module
+## 🏗 Tech Stack
 
-Dedicated maintenance section
+**Frontend**
+- React + TypeScript  
+- Tailwind CSS  
+- Vite  
 
-“Mark as Maintained” functionality
+**Backend**
+- FastAPI  
+- SQLAlchemy  
 
-Automatically removes serviced pumps from the maintenance list
+**Database**
+- SQLite / PostgreSQL  
 
-🤖 AI Failure Prediction
+**Machine Learning**
+- Scikit-learn  
 
-Machine Learning model to predict pump risk level
+---
 
-Identifies high-risk pumps before failure
+## 📂 Project Structure
 
-Supports predictive maintenance planning
-
-🏗 Tech Stack
-
-Frontend
-
-React + TypeScript
-
-Tailwind CSS
-
-Vite
-
-Backend
-
-FastAPI
-
-SQLAlchemy ORM
-
-RESTful API architecture
-
-Database
-
-SQLite / PostgreSQL
-
-Machine Learning
-
-Scikit-learn
-
-Integrated prediction API endpoint
-
-📂 Project Structure
+```
 AI-Powered-Pump-Maintenance-System
 │
 ├── backend/
@@ -82,12 +63,24 @@ AI-Powered-Pump-Maintenance-System
 │   └── package.json
 │
 └── README.md
-⚙️ Getting Started
-Backend
+```
+
+---
+
+## ⚙️ How to Run
+
+### Backend
+
+```bash
 cd backend
 pip install -r requirements.txt
 uvicorn main:app --reload
-Frontend
+```
+
+### Frontend
+
+```bash
 cd frontend
 npm install
 npm run dev
+```
