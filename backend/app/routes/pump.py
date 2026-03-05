@@ -1,80 +1,46 @@
-# app/routes/pumps.py
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from app.database import get_db
 from app.models.pump import Pump
-from app.schemas.pump import PumpCreate, PumpResponse
-from app.routes.auth import get_current_user, require_role
+
+router = APIRouter(prefix="/pumps", tags=["Pumps"])
 
 
-router = APIRouter(
-    prefix="/pumps",
-    tags=["Pumps"]
-)
-
-
-# ✅ CREATE PUMP (ADMIN ONLY)
-@router.post("/", response_model=PumpResponse)
-def add_pump(
-    pump: PumpCreate,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(require_role("admin"))
-):
-    new_pump = Pump(
-        name=pump.name,
-        status=pump.status
-    )
-
-    db.add(new_pump)
-    db.commit()
-    db.refresh(new_pump)
-
-    return new_pump
-
-
-# ✅ GET ALL PUMPS (ANY LOGGED IN USER)
-@router.get("/", response_model=list[PumpResponse])
-def get_pumps(
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
-):
+# ✅ Get All Pumps
+@router.get("/")
+def get_pumps(db: Session = Depends(get_db)):
     pumps = db.query(Pump).all()
     return pumps
 
 
-# ✅ GET PUMP BY ID
-@router.get("/{pump_id}", response_model=PumpResponse)
-def get_pump_by_id(
-    pump_id: int,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
-):
-    pump = db.query(Pump).filter(Pump.id == pump_id).first()
-
-    if not pump:
-        raise HTTPException(status_code=404, detail="Pump not found")
-
+# ✅ Create Pump
+@router.post("/")
+def create_pump(pump_data: dict, db: Session = Depends(get_db)):
+    pump = Pump(**pump_data)
+    db.add(pump)
+    db.commit()
+    db.refresh(pump)
     return pump
 
 
-# ✅ DELETE PUMP (ADMIN ONLY)
-@router.delete("/{pump_id}")
-def delete_pump(
-    pump_id: int,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(require_role("admin"))
-):
+# ✅ Mark Pump as Maintained (THIS WAS MISSING ❗)
+@router.put("/{pump_id}/maintain")
+def mark_maintained(pump_id: int, db: Session = Depends(get_db)):
     pump = db.query(Pump).filter(Pump.id == pump_id).first()
 
     if not pump:
         raise HTTPException(status_code=404, detail="Pump not found")
 
-    db.delete(pump)
+    pump.status = "working"
+    pump.last_maintenance_date = datetime.utcnow()
+
     db.commit()
+    db.refresh(pump)
 
     return {
         "success": True,
-        "message": "Pump deleted successfully"
+        "message": "Pump marked as maintained",
+        "pump_id": pump.id
     }

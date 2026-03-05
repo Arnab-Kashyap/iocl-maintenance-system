@@ -12,6 +12,9 @@ class Maintenance(Base):
     pump_id = Column(Integer, ForeignKey("pumps.id"), nullable=False)
     description = Column(String, nullable=False)
     status = Column(String, nullable=False)
+
+    due_date = Column(DateTime, nullable=True)   # Added due date
+
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),

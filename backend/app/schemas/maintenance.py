@@ -9,6 +9,7 @@ class MaintenanceCreate(BaseModel):
     pump_id: int
     description: str
     status: Literal["Pending", "In Progress", "Completed"]
+    due_date: datetime
 
 
 class MaintenanceUpdate(BaseModel):
@@ -20,6 +21,8 @@ class MaintenanceResponse(BaseModel):
     pump_id: int
     description: str
     status: str
+    due_date: datetime
     created_at: datetime
 
-    
+    class Config:
+        from_attributes = True
