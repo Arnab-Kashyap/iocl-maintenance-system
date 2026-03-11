@@ -1,135 +1,141 @@
-// src/pages/Maintenance.tsx
 import { useEffect, useState } from "react";
+
+interface MaintenanceTask {
+  id: number;
+  pump_id: number;
+  description: string;
+  status: string;
+  due_date: string | null;
+  created_at: string | null;
+}
 
 interface Pump {
   id: number;
   name: string;
-  last_maintenance_date: string | null;
   status: string;
+  created_at: string;
 }
 
 const Maintenance = () => {
+  const [tasks, setTasks] = useState<MaintenanceTask[]>([]);
   const [pumps, setPumps] = useState<Pump[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchPumps = async () => {
+  const token = localStorage.getItem("token");
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+
+  const fetchData = async () => {
     try {
-      const res = await fetch("http://localhost:8000/pumps", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch pumps");
-      }
-
-      const data: Pump[] = await res.json();
-
-      // Show ONLY pumps under maintenance
-      const pending = data.filter(
-        (p) => p.status.toLowerCase() === "under maintenance"
-      );
-
-      setPumps(pending);
+      const [taskRes, pumpRes] = await Promise.all([
+        fetch("/api/maintenance/", { headers }),
+        fetch("/api/pumps/", { headers }),
+      ]);
+      const taskData: MaintenanceTask[] = await taskRes.json();
+      const pumpData: Pump[] = await pumpRes.json();
+      setTasks(taskData);
+      setPumps(pumpData);
     } catch (err) {
-      console.error("Error fetching pumps:", err);
-      setPumps([]);
+      console.error("Error fetching data:", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPumps();
+    fetchData();
   }, []);
 
-  const handleMaintain = async (id: number) => {
+  const handleMarkCompleted = async (taskId: number) => {
     try {
-      const res = await fetch(
-        `http://localhost:8000/pumps/${id}/maintain`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
-      if (!res.ok) {
-        throw new Error("Failed to update pump");
-      }
-
-      // Remove from UI instantly
-      setPumps((prev) => prev.filter((p) => p.id !== id));
+      const res = await fetch(`/api/maintenance/${taskId}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ status: "Completed" }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      await fetchData();
     } catch (err) {
-      console.error("Error updating pump:", err);
+      console.error("Error updating task:", err);
     }
   };
 
-  if (loading) {
-    return <p>Loading maintenance schedule...</p>;
-  }
+  const getPumpName = (pumpId: number) => {
+    return pumps.find((p) => p.id === pumpId)?.name ?? `Pump #${pumpId}`;
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return "N/A";
+    return new Date(dateStr).toLocaleDateString("en-IN", {
+      day: "2-digit", month: "short", year: "numeric",
+    });
+  };
+
+  const statusStyles: Record<string, string> = {
+    Pending: "bg-yellow-100 text-yellow-700",
+    "In Progress": "bg-blue-100 text-blue-700",
+    Completed: "bg-green-100 text-green-700",
+  };
+
+  if (loading) return <p className="p-6 text-gray-500">Loading maintenance schedule...</p>;
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6">
-        Maintenance Schedule
-      </h2>
+      <h2 className="text-2xl font-bold mb-6">Maintenance Schedule</h2>
 
       <div className="overflow-x-auto bg-white rounded-xl shadow-md">
         <table className="w-full border-collapse">
           <thead className="bg-gray-100 text-left">
             <tr>
-              <th className="p-4">Pump</th>
-              <th className="p-4">Last Maintenance</th>
-              <th className="p-4">Status</th>
-              <th className="p-4 text-center">Action</th>
+              <th className="p-4 text-sm font-semibold text-gray-500 uppercase tracking-wider">Task ID</th>
+              <th className="p-4 text-sm font-semibold text-gray-500 uppercase tracking-wider">Pump</th>
+              <th className="p-4 text-sm font-semibold text-gray-500 uppercase tracking-wider">Description</th>
+              <th className="p-4 text-sm font-semibold text-gray-500 uppercase tracking-wider">Due Date</th>
+              <th className="p-4 text-sm font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="p-4 text-sm font-semibold text-gray-500 uppercase tracking-wider text-center">Action</th>
             </tr>
           </thead>
-
           <tbody>
-            {pumps.length > 0 ? (
-              pumps.map((pump) => (
-                <tr
-                  key={pump.id}
-                  className="border-t hover:bg-gray-50 transition"
-                >
-                  <td className="p-4 font-medium">
-                    {pump.name}
+            {tasks.length > 0 ? (
+              tasks.map((task) => (
+                <tr key={task.id} className="border-t hover:bg-gray-50 transition">
+                  <td className="p-4 font-mono text-sm text-gray-500">
+                    #{String(task.id).padStart(3, "0")}
                   </td>
-
-                  <td className="p-4">
-                    {pump.last_maintenance_date
-                      ? new Date(
-                          pump.last_maintenance_date
-                        ).toLocaleDateString()
-                      : "N/A"}
+                  <td className="p-4 font-medium text-gray-800">
+                    {getPumpName(task.pump_id)}
                   </td>
-
+                  <td className="p-4 text-sm text-gray-600 max-w-xs">
+                    {task.description}
+                  </td>
+                  <td className="p-4 text-sm text-gray-600">
+                    {formatDate(task.due_date)}
+                  </td>
                   <td className="p-4">
-                    <span className="px-3 py-1 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-700">
-                      {pump.status}
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[task.status] ?? "bg-gray-100 text-gray-600"}`}>
+                      {task.status}
                     </span>
                   </td>
-
                   <td className="p-4 text-center">
-                    <button
-                      onClick={() => handleMaintain(pump.id)}
-                      className="bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-lg transition"
-                    >
-                      Mark Maintained
-                    </button>
+                    {task.status !== "Completed" ? (
+                      <button
+                        onClick={() => handleMarkCompleted(task.id)}
+                        className="bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-lg text-sm transition"
+                      >
+                        Mark Completed
+                      </button>
+                    ) : (
+                      <span className="text-green-500 text-sm font-semibold">✓ Done</span>
+                    )}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td
-                  colSpan={4}
-                  className="p-6 text-center text-gray-500"
-                >
-                  No maintenance tasks pending
+                <td colSpan={6} className="p-6 text-center text-gray-500">
+                  No maintenance tasks found
                 </td>
               </tr>
             )}

@@ -1,19 +1,18 @@
-# app/schemas/maintenance.py
-
 from pydantic import BaseModel
-from typing import Literal
 from datetime import datetime
+from typing import Optional
 
 
 class MaintenanceCreate(BaseModel):
     pump_id: int
     description: str
-    status: Literal["Pending", "In Progress", "Completed"]
-    due_date: datetime
+    status: str = "Pending"
+    due_date: Optional[datetime] = None
 
 
 class MaintenanceUpdate(BaseModel):
-    status: Literal["Pending", "In Progress", "Completed"]
+    status: str
+    due_date: Optional[datetime] = None
 
 
 class MaintenanceResponse(BaseModel):
@@ -21,8 +20,8 @@ class MaintenanceResponse(BaseModel):
     pump_id: int
     description: str
     status: str
-    due_date: datetime
-    created_at: datetime
+    due_date: Optional[datetime] = None   # ← Optional so None doesn't crash
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

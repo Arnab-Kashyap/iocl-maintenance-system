@@ -10,10 +10,9 @@ from app.auth import hash_password, verify_password, create_access_token, SECRET
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
-# ---------------- REGISTER ----------------
 @router.post("/register")
 def register(user: UserCreate, db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.username == user.username).first()
@@ -35,7 +34,6 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     return {"message": "User registered successfully"}
 
 
-# ---------------- LOGIN ----------------
 @router.post("/login")
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -54,14 +52,13 @@ def login(
     )
 
     return {
-    "access_token": access_token,
-    "token_type": "bearer",
-    "role": db_user.role   
-}
+        "access_token": access_token,
+        "token_type": "bearer",
+        "role": db_user.role,
+        "username": db_user.username
+    }
 
 
-
-# ---------------- GET CURRENT USER ----------------
 def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -77,9 +74,8 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
-# ---------------- ROLE CHECKER ----------------
 def require_role(required_role: str):
-    def role_checker(user=Depends(get_current_user)):
+    def role_checker(user: dict = Depends(get_current_user)):
         if user["role"] != required_role:
             raise HTTPException(status_code=403, detail="Access denied")
         return user

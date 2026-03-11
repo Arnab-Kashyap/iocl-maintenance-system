@@ -10,7 +10,7 @@ from app.schemas.maintenance import (
     MaintenanceUpdate,
     MaintenanceResponse
 )
-from app.routes.auth import require_role
+from app.routes.auth import require_role, get_current_user
 
 router = APIRouter(
     prefix="/maintenance",
@@ -18,23 +18,20 @@ router = APIRouter(
 )
 
 
-# GET ALL MAINTENANCE TASKS
 @router.get("/", response_model=list[MaintenanceResponse])
 def get_all_maintenance(
     db: Session = Depends(get_db),
-    current_user: dict = Depends(require_role("technician"))
+    current_user: dict = Depends(get_current_user)
 ):
     return db.query(Maintenance).all()
 
 
-# CREATE MAINTENANCE
 @router.post("/", response_model=MaintenanceResponse)
 def schedule_maintenance(
     maintenance: MaintenanceCreate,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(require_role("technician"))
+    current_user: dict = Depends(get_current_user)
 ):
-
     pump = db.query(Pump).filter(Pump.id == maintenance.pump_id).first()
 
     if not pump:
@@ -47,24 +44,20 @@ def schedule_maintenance(
     )
 
     db.add(new_record)
-
     pump.status = "Under Maintenance"
-
     db.commit()
     db.refresh(new_record)
 
     return new_record
 
 
-# UPDATE MAINTENANCE STATUS
 @router.put("/{maintenance_id}", response_model=MaintenanceResponse)
 def update_maintenance_status(
     maintenance_id: int,
     data: MaintenanceUpdate,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(require_role("technician"))
+    current_user: dict = Depends(get_current_user)
 ):
-
     record = db.query(Maintenance).filter(
         Maintenance.id == maintenance_id
     ).first()
@@ -89,26 +82,23 @@ def update_maintenance_status(
     return record
 
 
-# GET MAINTENANCE BY PUMP
 @router.get("/pump/{pump_id}", response_model=list[MaintenanceResponse])
 def get_maintenance_by_pump(
     pump_id: int,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(require_role("technician"))
+    current_user: dict = Depends(get_current_user)
 ):
     return db.query(Maintenance).filter(
         Maintenance.pump_id == pump_id
     ).all()
 
 
-# DELETE MAINTENANCE (ADMIN)
 @router.delete("/{maintenance_id}")
 def delete_maintenance(
     maintenance_id: int,
     db: Session = Depends(get_db),
     current_user: dict = Depends(require_role("admin"))
 ):
-
     record = db.query(Maintenance).filter(
         Maintenance.id == maintenance_id
     ).first()

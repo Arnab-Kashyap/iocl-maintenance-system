@@ -8,29 +8,21 @@ import TechnicianDashboard from "./pages/TechnicianDashboard"
 import Pumps from "./pages/Pumps"
 import Maintenance from "./pages/Maintenance"
 import Reports from "./pages/Reports"
+import Prediction from "./pages/Prediction"
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-    
         <Route path="/" element={<Login />} />
 
-       
         <Route element={<DashboardLayout />}>
-         
           <Route path="/dashboard" element={<AdminDashboard />} />
-
-      
-          <Route
-            path="/technician-dashboard"
-            element={<TechnicianDashboard />}
-          />
-
-
+          <Route path="/technician-dashboard" element={<TechnicianDashboard />} />
           <Route path="/pumps" element={<Pumps />} />
           <Route path="/maintenance" element={<Maintenance />} />
           <Route path="/reports" element={<Reports />} />
+          <Route path="/prediction" element={<Prediction />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom"
 import { useState } from "react"
+import type { FormEvent } from "react"
 import {
   Lock,
   Mail,
@@ -18,56 +19,57 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [selectedRole, setSelectedRole] = useState<Role>("admin")
-
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [error, setError] = useState<string | null>(null)
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError(null)
 
     try {
       const formData = new URLSearchParams()
       formData.append("username", username)
       formData.append("password", password)
 
-      const response = await fetch("http://127.0.0.1:8000/auth/login", {
+   
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: formData,
+        body: formData.toString(),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        alert("Invalid credentials")
+        setError(data.detail ?? "Invalid credentials")
         setIsLoading(false)
         return
       }
 
-      // ✅ Optional: Validate selected role matches backend role
       if (data.role.toLowerCase() !== selectedRole.toLowerCase()) {
-  alert("You selected wrong role for this account")
-  setIsLoading(false)
-  return
-}
+        setError(`This account is registered as "${data.role}". Please select the correct role.`)
+        setIsLoading(false)
+        return
+      }
 
-
-      // Save token & role
+      
       localStorage.setItem("token", data.access_token)
       localStorage.setItem("role", data.role)
+      localStorage.setItem("username", data.username)
 
-      // ✅ Correct routing (matches App.tsx)
+      // Route based on role
       if (data.role === "admin") {
         navigate("/dashboard")
       } else if (data.role === "technician") {
         navigate("/technician-dashboard")
       }
 
-    } catch (error) {
-      alert("Login failed")
+    } catch (err) {
+      setError("Network error — is the backend running on port 8000?")
     }
 
     setIsLoading(false)
@@ -78,7 +80,6 @@ const Login = () => {
 
       {/* LEFT SIDE */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-
         <div className="absolute inset-0 opacity-5">
           <div
             className="absolute inset-0"
@@ -152,13 +153,16 @@ const Login = () => {
           <div className="bg-gray-800 rounded-2xl shadow-2xl p-8 border border-gray-700">
 
             <div className="mb-8">
-              <h2 className="text-3xl font-bold text-white mb-2">
-                Welcome Back
-              </h2>
-              <p className="text-gray-400">
-                Sign in to access your dashboard
-              </p>
+              <h2 className="text-3xl font-bold text-white mb-2">Welcome Back</h2>
+              <p className="text-gray-400">Sign in to access your dashboard</p>
             </div>
+
+            {/* Error message */}
+            {error && (
+              <div className="mb-6 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-400">
+                ⚠ {error}
+              </div>
+            )}
 
             <form className="space-y-6" onSubmit={handleLogin}>
 
@@ -167,27 +171,25 @@ const Login = () => {
                 <label className="block text-sm font-semibold text-gray-300 mb-2">
                   Login As
                 </label>
-
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setSelectedRole("admin")}
-                    className={`py-3 rounded-lg border-2 font-semibold text-sm ${
+                    className={`py-3 rounded-lg border-2 font-semibold text-sm transition-all ${
                       selectedRole === "admin"
                         ? "border-orange-500 bg-orange-500/10 text-orange-400"
-                        : "border-gray-600 bg-gray-900 text-gray-400"
+                        : "border-gray-600 bg-gray-900 text-gray-400 hover:border-gray-500"
                     }`}
                   >
                     Admin
                   </button>
-
                   <button
                     type="button"
                     onClick={() => setSelectedRole("technician")}
-                    className={`py-3 rounded-lg border-2 font-semibold text-sm ${
+                    className={`py-3 rounded-lg border-2 font-semibold text-sm transition-all ${
                       selectedRole === "technician"
                         ? "border-orange-500 bg-orange-500/10 text-orange-400"
-                        : "border-gray-600 bg-gray-900 text-gray-400"
+                        : "border-gray-600 bg-gray-900 text-gray-400 hover:border-gray-500"
                     }`}
                   >
                     Technician
@@ -197,9 +199,7 @@ const Login = () => {
 
               {/* USERNAME */}
               <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2">
-                  ID
-                </label>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">ID</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-3.5 w-5 h-5 text-gray-500" />
                   <input
@@ -207,7 +207,7 @@ const Login = () => {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Enter your ID"
-                    className="w-full pl-12 pr-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                    className="w-full pl-12 pr-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
                     required
                   />
                 </div>
@@ -215,9 +215,7 @@ const Login = () => {
 
               {/* PASSWORD */}
               <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2">
-                  Password
-                </label>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-3.5 w-5 h-5 text-gray-500" />
                   <input
@@ -225,15 +223,15 @@ const Login = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="w-full pl-12 pr-12 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                    className="w-full pl-12 pr-12 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-3.5 text-gray-500"
+                    className="absolute right-4 top-3.5 text-gray-500 hover:text-gray-300 transition-colors"
                   >
-                    {showPassword ? <EyeOff /> : <Eye />}
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
@@ -241,7 +239,7 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 rounded-lg font-semibold disabled:opacity-50"
+                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 rounded-lg font-semibold disabled:opacity-50 hover:from-orange-600 hover:to-orange-700 transition-all"
               >
                 {isLoading ? "Signing in..." : "Sign In"}
               </button>

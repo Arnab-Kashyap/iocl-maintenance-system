@@ -17,7 +17,7 @@ interface MaintenanceTask {
 const TASK_STATUSES: TaskStatus[] = ["Pending", "In Progress", "Completed"];
 const filterOptions: Array<"All" | TaskStatus> = ["All", "Pending", "In Progress", "Completed"];
 
-
+// ── Helper: format ISO date ───────────────────────────────────────────────────
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return "—";
@@ -149,13 +149,27 @@ export default function TechnicianDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
+  // ── Auth header helper ─────────────────────────────────────────────────────
+  function authHeaders(): HeadersInit {
+    const token = localStorage.getItem("token");
+    return {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }
+
   // ── Fetch tasks from backend ────────────────────────────────────────────────
   useEffect(() => {
     async function fetchTasks() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/maintenance");
+        // FastAPI route is GET /maintenance/ (trailing slash required)
+        const res = await fetch("/api/maintenance/", {
+          headers: authHeaders(),
+        });
+        if (res.status === 401) throw new Error("Session expired. Please log in again.");
+        if (res.status === 403) throw new Error("Access denied. Technician role required.");
         if (!res.ok) throw new Error(`Server error: ${res.status}`);
         const data: MaintenanceTask[] = await res.json();
         setTasks(data);
@@ -168,37 +182,37 @@ export default function TechnicianDashboard() {
     fetchTasks();
   }, []);
 
-  
+  // ── Update task status via backend ─────────────────────────────────────────
   async function handleStatusChange(id: number, newStatus: TaskStatus) {
     setUpdatingId(id);
-    
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
     );
     try {
+      // Backend uses PUT not PATCH
       const res = await fetch(`/api/maintenance/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        method: "PUT",
+        headers: authHeaders(),
         body: JSON.stringify({ status: newStatus }),
       });
+      if (res.status === 401) throw new Error("Session expired. Please log in again.");
       if (!res.ok) throw new Error(`Update failed: ${res.status}`);
       const updated: MaintenanceTask = await res.json();
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)));
     } catch (err: unknown) {
       console.error(err);
-      
       try {
-        const res = await fetch("/api/maintenance");
+        const res = await fetch("/api/maintenance/", { headers: authHeaders() });
         if (res.ok) setTasks(await res.json());
       } catch {
-       
+        // silently ignore re-fetch error
       }
     } finally {
       setUpdatingId(null);
     }
   }
 
-
+  // ── Derived counts ──────────────────────────────────────────────────────────
   const total = tasks.length;
   const inProgress = tasks.filter((t) => t.status === "In Progress").length;
   const pending = tasks.filter((t) => t.status === "Pending").length;
