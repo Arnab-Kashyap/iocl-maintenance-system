@@ -1,6 +1,4 @@
-# app/routes/maintenance.py
-
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 
@@ -20,7 +18,16 @@ router = APIRouter(
 )
 
 
-# SCHEDULE MAINTENANCE (TECHNICIAN)
+# GET ALL MAINTENANCE TASKS
+@router.get("/", response_model=list[MaintenanceResponse])
+def get_all_maintenance(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("technician"))
+):
+    return db.query(Maintenance).all()
+
+
+# CREATE MAINTENANCE
 @router.post("/", response_model=MaintenanceResponse)
 def schedule_maintenance(
     maintenance: MaintenanceCreate,
@@ -49,7 +56,7 @@ def schedule_maintenance(
     return new_record
 
 
-# UPDATE MAINTENANCE
+# UPDATE MAINTENANCE STATUS
 @router.put("/{maintenance_id}", response_model=MaintenanceResponse)
 def update_maintenance_status(
     maintenance_id: int,

@@ -17,7 +17,7 @@ interface MaintenanceTask {
 const TASK_STATUSES: TaskStatus[] = ["Pending", "In Progress", "Completed"];
 const filterOptions: Array<"All" | TaskStatus> = ["All", "Pending", "In Progress", "Completed"];
 
-// ── Helper: format ISO date ───────────────────────────────────────────────────
+
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return "—";
@@ -168,10 +168,10 @@ export default function TechnicianDashboard() {
     fetchTasks();
   }, []);
 
-  // ── Update task status via backend ─────────────────────────────────────────
+  
   async function handleStatusChange(id: number, newStatus: TaskStatus) {
     setUpdatingId(id);
-    // Optimistic update
+    
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
     );
@@ -186,19 +186,19 @@ export default function TechnicianDashboard() {
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)));
     } catch (err: unknown) {
       console.error(err);
-      // Revert on failure — re-fetch to restore truth
+      
       try {
         const res = await fetch("/api/maintenance");
         if (res.ok) setTasks(await res.json());
       } catch {
-        // silently ignore re-fetch error
+       
       }
     } finally {
       setUpdatingId(null);
     }
   }
 
-  // ── Derived counts ──────────────────────────────────────────────────────────
+
   const total = tasks.length;
   const inProgress = tasks.filter((t) => t.status === "In Progress").length;
   const pending = tasks.filter((t) => t.status === "Pending").length;
